@@ -19,7 +19,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Noto+Sans+JP:wght@300;400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght=700&family=Noto+Sans+JP:wght@300;400;700&display=swap" rel="stylesheet">
     
     <style>
         body { font-family: 'Noto Sans JP', sans-serif; background-color: #F8FAFB; -webkit-tap-highlight-color: transparent; }
@@ -114,6 +114,21 @@
             const isBiometricsSupported = () => {
                 return !!(window.PublicKeyCredential && 
                           typeof window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function');
+            };
+
+            // === リアルタイム・カンマ自動挿入用のヘルパー関数 ===
+            const formatWithCommas = (val) => {
+                if (val === undefined || val === null || val === '') return '';
+                // 数字以外の全ての文字を除去
+                const numStr = String(val).replace(/[^0-9]/g, '');
+                if (numStr === '') return '';
+                return Number(numStr).toLocaleString('ja-JP');
+            };
+
+            const parseCommas = (val) => {
+                // カンマを除去して数値に戻す
+                const numStr = String(val).replace(/[^0-9]/g, '');
+                return numStr === '' ? 0 : Number(numStr);
             };
 
             const App = () => {
@@ -454,11 +469,6 @@
                     });
                 }, [assets]);
 
-                const cleanNumValue = (val) => {
-                    const str = String(val).replace(/^0+/, '');
-                    return str === '' ? 0 : Number(str);
-                };
-
                 const formatYen = (num) => (num / 10000).toLocaleString(undefined, {maximumFractionDigits:1}) + '万';
                 
                 const totals = useMemo(() => assets.reduce((acc, curr) => {
@@ -545,7 +555,7 @@
                 };
 
                 const updateCost = async (id, type, val) => {
-                    const cleanVal = cleanNumValue(val);
+                    const cleanVal = parseCommas(val);
                     const newCosts = { ...costs, [id]: { ...costs[id], [type]: cleanVal } };
                     setCosts(newCosts);
                     if (isDemoMode) {
@@ -709,6 +719,7 @@
 
                                 <div className="text-center pt-2">
                                     <button 
+                                        type="button"
                                         onClick={() => {
                                             setAuthMode(authMode === 'login' ? 'register' : 'login');
                                             setAuthError('');
@@ -796,7 +807,7 @@
                                         <div className="p-4 bg-[#D4AF37] rounded-2xl shadow-lg"><Icon name="scissors" /></div>
                                         <div><p className="text-[10px] font-bold opacity-40 uppercase tracking-widest leading-none mb-1">月々の投資捻出額</p><p className="text-3xl font-bold text-[#B2EBF2]">{monthlySavingTotal.toLocaleString()}円</p></div>
                                     </div>
-                                    <div className="space-y-3">{COST_ITEMS.map(item => (<div key={item.id} className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 space-y-4"><div className="flex items-center gap-3"><Icon name={item.icon} className="text-[#455A64] w-4 h-4" /><h4 className="text-sm font-bold text-[#455A64]">{item.label}</h4></div><div className="grid grid-cols-2 gap-3"><div><label className="text-[8px] text-gray-300 font-bold uppercase ml-1 tracking-widest">現状</label><input type="number" inputmode="numeric" placeholder="0" className="w-full bg-gray-50 p-3 rounded-xl text-xs outline-none font-bold" value={costs[item.id]?.current || ''} onFocus={e => e.target.select()} onChange={e=>updateCost(item.id, 'current', e.target.value)} /></div><div><label className="text-[8px] text-[#D4AF37] font-bold uppercase ml-1 tracking-widest">見直し</label><input type="number" inputmode="numeric" placeholder="0" className="w-full bg-[#E0F2F1] p-3 rounded-xl text-xs outline-none font-bold" value={costs[item.id]?.after || ''} onFocus={e => e.target.select()} onChange={e=>updateCost(item.id, 'after', e.target.value)} /></div></div></div>))}</div>
+                                    <div className="space-y-3">{COST_ITEMS.map(item => (<div key={item.id} className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 space-y-4"><div className="flex items-center gap-3"><Icon name={item.icon} className="text-[#455A64] w-4 h-4" /><h4 className="text-sm font-bold text-[#455A64]">{item.label}</h4></div><div className="grid grid-cols-2 gap-3"><div><label className="text-[8px] text-gray-300 font-bold uppercase ml-1 tracking-widest">現状</label><input type="text" inputmode="numeric" placeholder="0" className="w-full bg-gray-50 p-3 rounded-xl text-xs outline-none font-bold text-[#455A64]" value={formatWithCommas(costs[item.id]?.current)} onFocus={e => e.target.select()} onChange={e=>updateCost(item.id, 'current', e.target.value)} /></div><div><label className="text-[8px] text-[#D4AF37] font-bold uppercase ml-1 tracking-widest">見直し</label><input type="text" inputmode="numeric" placeholder="0" className="w-full bg-[#E0F2F1] p-3 rounded-xl text-xs outline-none font-bold text-[#004d40]" value={formatWithCommas(costs[item.id]?.after)} onFocus={e => e.target.select()} onChange={e=>updateCost(item.id, 'after', e.target.value)} /></div></div></div>))}</div>
                                 </div>
                             )}
 
@@ -865,9 +876,9 @@
 
                                         <div className="space-y-6 pt-4 border-t border-gray-50">
                                             {simMode === 'zero' && (
-                                                <div className="space-y-3 animate-pop"><div className="flex justify-between items-center"><label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">開始時の元本</label><input type="number" inputmode="numeric" className="text-right font-bold text-[#455A64] bg-gray-50 px-3 py-1 rounded-xl text-sm w-28 outline-none" value={simInitialManual || ''} onFocus={e => e.target.select()} onChange={e => setSimInitialManual(cleanNumValue(e.target.value))} /></div><input type="range" min="0" max="50000000" step="100000" value={simInitialManual} onChange={e=>setSimInitialManual(Number(e.target.value))} className="w-full" /></div>
+                                                <div className="space-y-3 animate-pop"><div className="flex justify-between items-center"><label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">開始時の元本</label><input type="text" inputmode="numeric" className="text-right font-bold text-[#455A64] bg-gray-50 px-3 py-1 rounded-xl text-sm w-36 outline-none" value={formatWithCommas(simInitialManual)} onFocus={e => e.target.select()} onChange={e => setSimInitialManual(parseCommas(e.target.value))} /></div><input type="range" min="0" max="50000000" step="100000" value={simInitialManual} onChange={e=>setSimInitialManual(Number(e.target.value))} className="w-full" /></div>
                                             )}
-                                            <div className="space-y-3"><div className="flex justify-between items-center"><label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">月々の積立額</label><input type="number" inputmode="numeric" className="text-right font-bold text-[#D4AF37] bg-gray-50 px-3 py-1 rounded-xl text-sm w-28 outline-none" value={currentSimMonthly || ''} onFocus={e => e.target.select()} onChange={e => setSimMonthlyManual(cleanNumValue(e.target.value))} /></div><input type="range" min="0" max="1000000" step="5000" value={currentSimMonthly} onChange={e=>setSimMonthlyManual(Number(e.target.value))} className="w-full h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer" /></div>
+                                            <div className="space-y-3"><div className="flex justify-between items-center"><label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">月々の積立額</label><input type="text" inputmode="numeric" className="text-right font-bold text-[#D4AF37] bg-gray-50 px-3 py-1 rounded-xl text-sm w-36 outline-none" value={formatWithCommas(currentSimMonthly)} onFocus={e => e.target.select()} onChange={e => setSimMonthlyManual(parseCommas(e.target.value))} /></div><input type="range" min="0" max="1000000" step="5000" value={currentSimMonthly} onChange={e=>setSimMonthlyManual(Number(e.target.value))} className="w-full h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer" /></div>
                                             <div className="grid grid-cols-2 gap-6">
                                                 <div className="space-y-2"><label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">想定年利(%)</label><input type="number" inputmode="decimal" step="0.1" className="w-full bg-gray-50 p-3 rounded-xl text-sm font-bold text-[#455A64] outline-none" value={simRate || ''} onFocus={e => e.target.select()} onChange={e => setSimRate(cleanNumValue(e.target.value))} /></div>
                                                 <div className="space-y-2"><label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">期間(年)</label><input type="number" inputmode="numeric" className="w-full bg-gray-50 p-3 rounded-xl text-sm font-bold text-[#455A64] outline-none" value={simYears || ''} onFocus={e => e.target.select()} onChange={e => setSimYears(cleanNumValue(e.target.value))} /></div>
@@ -883,7 +894,7 @@
                                 <div className="space-y-6 animate-pop">
                                     <div className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 text-center">
                                         <div className="flex justify-between items-center mb-8"><h3 className="text-xs font-bold text-[#455A64] uppercase tracking-widest flex items-center gap-2 leading-none"><Icon name="history" /> 推移の記録</h3><button onClick={recordHistory} className="p-3 bg-[#455A64] text-white rounded-full shadow-lg active:scale-90 transition-all"><Icon name="camera" /></button></div>
-                                        {history.length > 0 ? (<div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><AreaChart data={history}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f5f5f5" /><XAxis dataKey="dateLabel" axisLine={false} tickLine={false} tick={{fontSize: 10}} /><Tooltip formatter={(val) => (val/10000).toLocaleString() + '万'} /><Legend iconType="circle" />{Object.entries(ASSET_CATEGORIES).map(([name, info]) => (<Area key={name} type="monotone" dataKey={name} stackId="1" stroke={info.color} fill={info.color} fillOpacity={0.6} name={info.label} />))}</AreaChart></ResponsiveContainer></div>) : <div className="h-40 flex items-center justify-center border-2 border-dashed rounded-[32px] text-gray-300 text-[10px] uppercase font-bold tracking-widest font-bold">まだ記録がありません</div>}
+                                        {history.length > 0 ? (<div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><AreaChart data={history}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f5f5f5" /><XAxis dataKey="dateLabel" axisLine={false} tickLine={false} tick={{fontSize: 10}} /><Tooltip formatter={(val) => (val/10000).toLocaleString() + '万'} /><Legend iconType="circle" />{Object.entries(ASSET_CATEGORIES).map(([name, info]) => (<Area key={name} type="monotone" dataKey={name} stackId="1" stroke={info.color} fill={info.color} fillOpacity={0.6} name={info.label} />))}</AreaChart></ResponsiveContainer></div>) : <div className="h-40 flex items-center justify-center border-2 border-dashed rounded-[32px] text-gray-300 text-[10px] uppercase font-bold tracking-widest">まだ記録がありません</div>}
                                     </div>
                                     <div className="space-y-3">
                                         <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-1">過去のログ</h3>
@@ -915,8 +926,8 @@
                             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex items-center justify-center p-6 animate-pop">
                                 <div className="bg-white rounded-[40px] p-8 w-full max-w-sm shadow-2xl space-y-4">
                                     <h3 className="font-bold text-[#455A64] text-center tracking-widest text-sm uppercase">Add Asset</h3>
-                                    <input type="text" placeholder="資産名称" className="w-full p-4 bg-gray-50 rounded-2xl text-sm font-bold outline-none border-2 border-transparent focus:border-[#D4AF37]/30" value={newItem.name} onChange={e=>setNewItem({...newItem, name: e.target.value})} />
-                                    <input type="number" inputmode="numeric" placeholder="金額" className="w-full p-4 bg-gray-50 rounded-2xl text-sm font-bold outline-none border-2 border-transparent focus:border-[#D4AF37]/30" value={newItem.amount || ''} onFocus={e => e.target.select()} onChange={e => setNewItem({...newItem, amount: cleanNumValue(e.target.value)})} />
+                                    <input type="text" placeholder="資産名称" className="w-full p-4 bg-gray-50 rounded-2xl text-sm font-bold outline-none border-2 border-transparent focus:border-[#D4AF37]/30 text-[#455A64]" value={newItem.name} onChange={e=>setNewItem({...newItem, name: e.target.value})} />
+                                    <input type="text" inputmode="numeric" placeholder="金額" className="w-full p-4 bg-gray-50 rounded-2xl text-sm font-bold outline-none border-2 border-transparent focus:border-[#D4AF37]/30 text-[#455A64]" value={formatWithCommas(newItem.amount)} onFocus={e => e.target.select()} onChange={e => setNewItem({...newItem, amount: parseCommas(e.target.value)})} />
                                     <div className="grid grid-cols-2 gap-2">{Object.keys(ASSET_CATEGORIES).map(cat => (<button key={cat} onClick={()=>setNewItem({...newItem, category:cat})} className={`py-2.5 rounded-xl text-[9px] font-bold ${newItem.category===cat ? 'bg-[#455A64] text-white shadow-md' : 'bg-gray-100 text-gray-400'}`}>{ASSET_CATEGORIES[cat].label}</button>))}</div>
                                     <div className="flex gap-2 pt-2"><button onClick={()=>setIsAdding(false)} className="flex-1 text-xs text-gray-400 font-bold uppercase">戻る</button><button onClick={handleAdd} className="flex-1 py-4 bg-[#D4AF37] text-white rounded-2xl text-sm font-bold shadow-lg">保存する</button></div>
                                 </div>
@@ -927,8 +938,8 @@
                             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex items-center justify-center p-6 animate-pop">
                                 <div className="bg-white rounded-[40px] p-8 w-full max-w-sm shadow-2xl space-y-4">
                                     <h3 className="font-bold text-[#455A64] text-center tracking-widest text-sm uppercase">Edit Asset</h3>
-                                    <input type="text" className="w-full p-4 bg-gray-50 rounded-2xl text-sm font-bold outline-none border-2 border-transparent focus:border-[#D4AF37]/30" value={editingAsset.name} onChange={e=>setEditingAsset({...editingAsset, name: e.target.value})} />
-                                    <input type="number" inputmode="numeric" className="w-full p-4 bg-gray-50 rounded-2xl text-sm font-bold outline-none border-2 border-transparent focus:border-[#D4AF37]/30" value={editingAsset.amount || ''} onFocus={e => e.target.select()} onChange={e => setEditingAsset({...editingAsset, amount: cleanNumValue(e.target.value)})} />
+                                    <input type="text" className="w-full p-4 bg-gray-50 rounded-2xl text-sm font-bold outline-none border-2 border-transparent focus:border-[#D4AF37]/30 text-[#455A64]" value={editingAsset.name} onChange={e=>setEditingAsset({...editingAsset, name: e.target.value})} />
+                                    <input type="text" inputmode="numeric" className="w-full p-4 bg-gray-50 rounded-2xl text-sm font-bold outline-none border-2 border-transparent focus:border-[#D4AF37]/30 text-[#455A64]" value={formatWithCommas(editingAsset.amount)} onFocus={e => e.target.select()} onChange={e => setEditingAsset({...editingAsset, amount: parseCommas(e.target.value)})} />
                                     <div className="grid grid-cols-2 gap-2">{Object.keys(ASSET_CATEGORIES).map(cat => (<button key={cat} onClick={()=>setEditingAsset({...editingAsset, category:cat})} className={`py-2.5 rounded-xl text-[9px] font-bold ${editingAsset.category===cat ? 'bg-[#455A64] text-white shadow-md' : 'bg-gray-100 text-gray-400'}`}>{ASSET_CATEGORIES[cat].label}</button>))}</div>
                                     <div className="flex gap-2 pt-2"><button onClick={()=>setEditingAsset(null)} className="flex-1 text-xs text-gray-400 font-bold uppercase">戻る</button><button onClick={handleUpdate} className="flex-1 py-4 bg-[#455A64] text-white rounded-2xl text-sm font-bold shadow-lg">更新する</button></div>
                                 </div>
@@ -941,7 +952,6 @@
                             </div>
                         )}
 
-                        {}
                         {showSettings && (
                             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex items-center justify-center p-6 animate-pop">
                                 <div className="bg-white rounded-[40px] p-8 w-full max-w-sm shadow-2xl space-y-6">

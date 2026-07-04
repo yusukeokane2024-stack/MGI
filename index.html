@@ -47,10 +47,7 @@
     <script type="text/babel">
         const { useState, useMemo, useEffect } = React;
 
-        // ==========================================
-        // 🚀 キャッシュ自動破棄バージョニング設定
-        // ==========================================
-        const APP_VERSION = '1.2.1'; // 債券追加のためバージョンをアップ
+        const APP_VERSION = '1.2.2'; 
 
         const initMGI = () => {
             if (!window.Recharts || !window.React || !window.firebase) {
@@ -70,12 +67,12 @@
             };
             const MGI_ID = 'mgi-ultimate-v1';
 
-            // 💡 ここに「債券」を追加しました！
+            // 💡 ここで「債券」が確実に追加されています
             const ASSET_CATEGORIES = {
                 '生活防衛資金': { color: '#455A64', label: '防衛', icon: 'wallet' },
                 '現金': { color: '#B2EBF2', label: '現金', icon: 'banknote' },
-                '債券': { color: '#81C784', label: '債券', icon: 'landmark' }, // <- ADDED
                 '株式': { color: '#D4AF37', label: '株式', icon: 'trending-up' },
+                '債券': { color: '#81C784', label: '債券', icon: 'landmark' }, // 追加
                 '老後資金': { color: '#5C6BC0', label: '老後', icon: 'coffee' },
                 '不動産': { color: '#FF7043', label: '不動産', icon: 'building-2' },
                 '暗号資産': { color: '#9575CD', label: '暗号', icon: 'bitcoin' },
@@ -95,11 +92,10 @@
                 return <i data-lucide={name} className={className}></i>;
             };
 
-            // デモ用の初期データ
             const DEFAULT_ASSETS = [
                 { id: 'demo-asset-1', name: '生活防衛：楽天銀行', amount: 1200000, category: '生活防衛資金' },
                 { id: 'demo-asset-2', name: 'eMAXIS Slim 全世界株式', amount: 3500000, category: '株式' },
-                { id: 'demo-asset-3', name: '米国国債ETF', amount: 1000000, category: '債券' }, // デモデータにも債券を追加
+                { id: 'demo-asset-3', name: '米国国債ETF', amount: 1000000, category: '債券' },
                 { id: 'demo-asset-4', name: 'ビットコイン積立', amount: 800000, category: '暗号資産' }
             ];
 
@@ -148,7 +144,6 @@
                 const [bioEnabled, setBioEnabled] = useState(false);
                 const [bioError, setBioError] = useState('');
                 
-                // Firestoreエラー表示用ステート
                 const [dbError, setDbError] = useState('');
 
                 const [authMode, setAuthMode] = useState('login'); 
@@ -171,12 +166,8 @@
                 const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, type: '', id: null, name: '' });
                 const [showSettings, setShowSettings] = useState(false);
 
-                // ==================================================
-                // 🛡️ キャッシュバスター・安全ガード付き自動アップデート
-                // ==================================================
                 useEffect(() => {
                     const hostname = window.location.hostname;
-                    
                     const isPreviewOrLocal = 
                         hostname.includes('localhost') || 
                         hostname.includes('127.0.0.1') || 
@@ -211,7 +202,6 @@
                             });
                     }
 
-                    // 4秒経ってもFirebaseが反応しない場合のみの通信エラー用フォールバック
                     const connectionTimeout = setTimeout(() => {
                         if (loading && isMounted) {
                             enableDemoMode();
@@ -258,10 +248,9 @@
 
                                 const userRef = db.collection('artifacts').doc(MGI_ID).collection('users').doc(u.uid);
                                 
-                                // エラー時に勝手にデモモードにしない
                                 assetsUnsubscribe = userRef.collection('assets').onSnapshot(s => {
                                     setAssets(s.docs.map(d => ({id: d.id, ...d.data()})));
-                                    setDbError(''); // 成功したらエラー消去
+                                    setDbError(''); 
                                 }, err => {
                                     console.error("Firestore Error:", err);
                                     if (err.code === 'permission-denied') {
@@ -464,7 +453,6 @@
                     const annualR = simRate / 100;
                     const monthlyR = Math.pow(1 + annualR, 1 / 12) - 1;
                     
-                    // 💡 シミュレーションの元本（投資資産）の合算に「債券」を追加
                     const initialCapital = simMode === 'current' 
                         ? (totals['株式'] || 0) + (totals['債券'] || 0) + (totals['不動産'] || 0) + (totals['暗号資産'] || 0) + (totals['ゴールド'] || 0) + (totals['老後資金'] || 0) 
                         : simInitialManual;
@@ -891,7 +879,6 @@
                                         </button>
                                     </div>
 
-                                    {/* Face ID 設定セクション */}
                                     <div className="space-y-3">
                                         <div className="flex items-center justify-between">
                                             <div>
@@ -929,9 +916,8 @@
                                         )}
                                     </div>
 
-                                    {/* 設定モーダルのフッター */}
                                     <div className="pt-2 border-t border-gray-100 flex justify-between items-center text-xs">
-                                        <span className="text-gray-400 font-bold">MGI Ultimate v1.2.1</span>
+                                        <span className="text-gray-400 font-bold">MGI Ultimate v1.2.2</span>
                                         <button 
                                             onClick={() => setShowSettings(false)} 
                                             className="px-4 py-2 bg-gray-50 hover:bg-gray-100 text-[#455A64] rounded-xl font-bold"

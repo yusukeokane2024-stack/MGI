@@ -81,10 +81,10 @@
 
             const COST_ITEMS = [
                 { id: 'insurance', label: '保険', icon: 'shield' },
-                { id: 'mobile', label: '通信・Wi-Fi', icon: 'wifi' },
+                { id: 'mobile', label: 'スマホ', icon: 'smartphone' }, // 通信・Wi-Fiからスマホに変更、アイコンもスマホに
                 { id: 'subscription', label: 'サブスク', icon: 'zap' },
                 { id: 'lessons', label: '習い事・学び', icon: 'graduation-cap' },
-                { id: 'housing', label: '住居・ローン', icon: 'home' }
+                { id: 'housing', label: '住居・ローン', icon: 'home' } // 住居は共通費用として扱うため夫・妻の区別なしとするか、あるいは共通フォーマットにするかですが、今回は全て夫・妻フォーマットに統一します
             ];
 
             const Icon = ({ name, className = "w-5 h-5" }) => {
@@ -99,12 +99,13 @@
                 { id: 'demo-asset-4', name: 'ビットコイン積立', amount: 800000, category: '暗号資産' }
             ];
 
+            // コストの初期データを夫・妻・メモ対応にアップデート
             const DEFAULT_COSTS = {
-                insurance: { current: 18000, after: 5000 },
-                mobile: { current: 8500, after: 3200 },
-                subscription: { current: 4000, after: 1500 },
-                lessons: { current: 15000, after: 10000 },
-                housing: { current: 85000, after: 85000 }
+                insurance: { husbandCurrent: 12000, husbandAfter: 3000, wifeCurrent: 6000, wifeAfter: 2000, memo: '' },
+                mobile: { husbandCurrent: 5000, husbandAfter: 2000, wifeCurrent: 3500, wifeAfter: 1200, memo: '' },
+                subscription: { husbandCurrent: 2000, husbandAfter: 500, wifeCurrent: 2000, wifeAfter: 1000, memo: '' },
+                lessons: { husbandCurrent: 10000, husbandAfter: 5000, wifeCurrent: 5000, wifeAfter: 5000, memo: '' },
+                housing: { husbandCurrent: 85000, husbandAfter: 85000, wifeCurrent: 0, wifeAfter: 0, memo: '共通費用は便宜上夫に入力' }
             };
 
             const DEFAULT_HISTORY = [
@@ -436,7 +437,9 @@
 
                 const monthlySavingTotal = useMemo(() => {
                     return Object.values(costs).reduce((acc, item) => {
-                        const diff = (Number(item.current) || 0) - (Number(item.after) || 0);
+                        const husbandDiff = (Number(item.husbandCurrent) || 0) - (Number(item.husbandAfter) || 0);
+                        const wifeDiff = (Number(item.wifeCurrent) || 0) - (Number(item.wifeAfter) || 0);
+                        const diff = husbandDiff + wifeDiff;
                         return acc + (diff > 0 ? diff : 0);
                     }, 0);
                 }, [costs]);
@@ -510,8 +513,11 @@
                 };
 
                 const updateCost = async (id, type, val) => {
-                    const cleanVal = parseCommas(val);
-                    const newCosts = { ...costs, [id]: { ...costs[id], [type]: cleanVal } };
+                    let updatedVal = val;
+                    if (type !== 'memo') {
+                        updatedVal = parseCommas(val);
+                    }
+                    const newCosts = { ...costs, [id]: { ...costs[id], [type]: updatedVal } };
                     setCosts(newCosts);
                     if (isDemoMode) { saveLocalData('mgi_costs', newCosts); }
                     else { await firebase.firestore().collection('artifacts').doc(MGI_ID).collection('users').doc(user.uid).collection('settings').doc('costs').set(newCosts); }
@@ -721,7 +727,58 @@
                                         <div className="p-4 bg-[#D4AF37] rounded-2xl shadow-lg"><Icon name="scissors" /></div>
                                         <div><p className="text-[10px] font-bold opacity-40 uppercase tracking-widest leading-none mb-1">月々の投資捻出額</p><p className="text-3xl font-bold text-[#B2EBF2]">{monthlySavingTotal.toLocaleString()}円</p></div>
                                     </div>
-                                    <div className="space-y-3">{COST_ITEMS.map(item => (<div key={item.id} className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 space-y-4"><div className="flex items-center gap-3"><Icon name={item.icon} className="text-[#455A64] w-4 h-4" /><h4 className="text-sm font-bold text-[#455A64]">{item.label}</h4></div><div className="grid grid-cols-2 gap-3"><div><label className="text-[8px] text-gray-300 font-bold uppercase ml-1 tracking-widest">現状</label><input type="text" inputmode="numeric" placeholder="0" className="w-full bg-gray-50 p-3 rounded-xl text-xs outline-none font-bold text-[#455A64]" value={formatWithCommas(costs[item.id]?.current)} onFocus={e => e.target.select()} onChange={e=>updateCost(item.id, 'current', e.target.value)} /></div><div><label className="text-[8px] text-[#D4AF37] font-bold uppercase ml-1 tracking-widest">見直し</label><input type="text" inputmode="numeric" placeholder="0" className="w-full bg-[#E0F2F1] p-3 rounded-xl text-xs outline-none font-bold text-[#004d40]" value={formatWithCommas(costs[item.id]?.after)} onFocus={e => e.target.select()} onChange={e=>updateCost(item.id, 'after', e.target.value)} /></div></div></div>))}</div>
+                                    
+                                    <div className="space-y-4">
+                                        {COST_ITEMS.map(item => (
+                                            <div key={item.id} className="bg-white p-5 rounded-[32px] shadow-sm border border-gray-100 space-y-4">
+                                                <div className="flex items-center gap-3">
+                                                    <Icon name={item.icon} className="text-[#455A64] w-4 h-4" />
+                                                    <h4 className="text-sm font-bold text-[#455A64]">{item.label}</h4>
+                                                </div>
+                                                
+                                                {/* 夫の入力欄 */}
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-lg">夫</span>
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <div>
+                                                            <label className="text-[8px] text-gray-300 font-bold uppercase ml-1 tracking-widest">現状</label>
+                                                            <input type="text" inputMode="numeric" placeholder="0" className="w-full bg-gray-50 p-3 rounded-xl text-xs outline-none font-bold text-[#455A64] focus:ring-1 focus:ring-[#D4AF37]/50" value={formatWithCommas(costs[item.id]?.husbandCurrent)} onFocus={e => e.target.select()} onChange={e=>updateCost(item.id, 'husbandCurrent', e.target.value)} />
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-[8px] text-[#D4AF37] font-bold uppercase ml-1 tracking-widest">見直し</label>
+                                                            <input type="text" inputMode="numeric" placeholder="0" className="w-full bg-[#E0F2F1] p-3 rounded-xl text-xs outline-none font-bold text-[#004d40] focus:ring-1 focus:ring-[#D4AF37]/50" value={formatWithCommas(costs[item.id]?.husbandAfter)} onFocus={e => e.target.select()} onChange={e=>updateCost(item.id, 'husbandAfter', e.target.value)} />
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="h-px bg-gray-50 w-full"></div>
+
+                                                {/* 妻の入力欄 */}
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-lg">妻</span>
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <div>
+                                                            <label className="text-[8px] text-gray-300 font-bold uppercase ml-1 tracking-widest">現状</label>
+                                                            <input type="text" inputMode="numeric" placeholder="0" className="w-full bg-gray-50 p-3 rounded-xl text-xs outline-none font-bold text-[#455A64] focus:ring-1 focus:ring-[#D4AF37]/50" value={formatWithCommas(costs[item.id]?.wifeCurrent)} onFocus={e => e.target.select()} onChange={e=>updateCost(item.id, 'wifeCurrent', e.target.value)} />
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-[8px] text-[#D4AF37] font-bold uppercase ml-1 tracking-widest">見直し</label>
+                                                            <input type="text" inputMode="numeric" placeholder="0" className="w-full bg-[#E0F2F1] p-3 rounded-xl text-xs outline-none font-bold text-[#004d40] focus:ring-1 focus:ring-[#D4AF37]/50" value={formatWithCommas(costs[item.id]?.wifeAfter)} onFocus={e => e.target.select()} onChange={e=>updateCost(item.id, 'wifeAfter', e.target.value)} />
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* 備考欄 */}
+                                                <div className="pt-2">
+                                                    <input type="text" placeholder="メモ（見直し内容など）" className="w-full bg-gray-50/50 border border-gray-100 p-3 rounded-xl text-xs outline-none text-gray-500 focus:bg-white focus:ring-1 focus:ring-[#D4AF37]/30 transition-all placeholder:text-gray-300" value={costs[item.id]?.memo || ''} onChange={e=>updateCost(item.id, 'memo', e.target.value)} />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
 
